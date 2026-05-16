@@ -58,6 +58,11 @@ func main() {
 	handle := handler.New(srv)
 
 	r := chi.NewRouter()
+	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "static/index.html")
+	})
+
 	r.Post("/shorten", handle.ShortenUrl)
 	r.Get("/{code}", handle.Redirect)
 	r.Get("/stats/{code}", handle.GetStats)

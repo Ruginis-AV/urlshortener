@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #111111;
+            --border: #222222;
+            --accent: #c8f135;
+            --text: #f0f0f0;
+            --muted: #555555;
+            --error: #ff4d4d;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        header {
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-family: 'Space Mono', monospace;
+            font-size: 2rem;
+            letter-spacing: -0.02em;
+            line-height: 1;
+        }
+
+        h1 span {
+            color: var(--accent);
+        }
+
+        .subtitle {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            font-weight: 300;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1.25rem;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        input[type="text"], input[type="datetime-local"] {
+            flex: 1;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus, input[type="datetime-local"]:focus {
+            border-color: var(--accent);
+        }
+
+        input::placeholder { color: var(--muted); }
+
+        .expires-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .expires-label {
+            font-size: 0.85rem;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+
+        button {
+            background: var(--accent);
+            color: #0a0a0a;
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            white-space: nowrap;
+        }
+
+        button:hover { opacity: 0.85; }
+        button:active { transform: scale(0.98); }
+
+        button.secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        button.danger {
+            background: transparent;
+            border: 1px solid var(--error);
+            color: var(--error);
+        }
+
+        .result {
+            display: none;
+            background: var(--bg);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .result.visible { display: block; }
+
+        .result-url {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--accent);
+            word-break: break-all;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .result-actions button {
+            padding: 0.4rem 0.9rem;
+            font-size: 0.75rem;
+        }
+
+        .error-msg {
+            display: none;
+            color: var(--error);
+            font-size: 0.85rem;
+            margin-top: 0.75rem;
+        }
+
+        .error-msg.visible { display: block; }
+
+        .stats-box {
+            display: none;
+        }
+
+        .stats-box.visible { display: block; }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        .stat-row:last-child { border-bottom: none; }
+
+        .stat-key { color: var(--muted); }
+
+        .stat-val {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.85rem;
+            word-break: break-all;
+            max-width: 60%;
+            text-align: right;
+        }
+
+        .stat-val.accent { color: var(--accent); }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <header>
+        <h1>url<span>.</span>short</h1>
+        <p class="subtitle">сокращай ссылки, считай клики</p>
+    </header>
+
+    <!-- Создание ссылки -->
+    <div class="card">
+        <div class="card-title">// создать ссылку</div>
+        <div class="input-row">
+            <input type="text" id="urlInput" placeholder="https://example.com/very/long/url">
+            <button onclick="createLink()">сократить</button>
+        </div>
+        <div class="expires-row">
+            <span class="expires-label">истекает:</span>
+            <input type="datetime-local" id="expiresInput">
+        </div>
+        <div class="error-msg" id="createError"></div>
+        <div class="result" id="createResult">
+            <div class="result-url" id="shortUrl"></div>
+            <div class="result-actions">
+                <button class="secondary" onclick="copyLink()">копировать</button>
+                <button class="secondary" onclick="openStats()">статистика</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Статистика -->
+    <div class="card">
+        <div class="card-title">// статистика</div>
+        <div class="input-row">
+            <input type="text" id="statsInput" placeholder="код ссылки (например gt1S15)">
+            <button onclick="getStats()">проверить</button>
+        </div>
+        <div class="error-msg" id="statsError"></div>
+        <div class="stats-box" id="statsBox">
+            <div class="stat-row">
+                <span class="stat-key">оригинал</span>
+                <span class="stat-val" id="statUrl"></span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-key">код</span>
+                <span class="stat-val accent" id="statCode"></span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-key">кликов</span>
+                <span class="stat-val accent" id="statClicks"></span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-key">создана</span>
+                <span class="stat-val" id="statCreated"></span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-key">истекает</span>
+                <span class="stat-val" id="statExpires"></span>
+            </div>
+            <div style="margin-top: 1rem;">
+                <button class="danger" onclick="deleteLink()">удалить ссылку</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const API = 'http://localhost:8080'
+    let currentCode = null
+
+    async function createLink() {
+        const url = document.getElementById('urlInput').value.trim()
+        const expiresRaw = document.getElementById('expiresInput').value
+        const errorEl = document.getElementById('createError')
+        const resultEl = document.getElementById('createResult')
+
+        errorEl.classList.remove('visible')
+        resultEl.classList.remove('visible')
+
+        if (!url) {
+            showError('createError', 'введи URL')
+            return
+        }
+
+        const body = { url }
+        if (expiresRaw) {
+            body.expires_at = new Date(expiresRaw).toISOString()
+        }
+
+        try {
+            const res = await fetch(`${API}/shorten`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            })
+
+            if (!res.ok) throw new Error(await res.text())
+
+            const data = await res.json()
+            currentCode = data.Code
+
+            document.getElementById('shortUrl').textContent = `${API}/${data.Code}`
+            resultEl.classList.add('visible')
+        } catch (e) {
+            showError('createError', e.message)
+        }
+    }
+
+    async function getStats(code) {
+        const input = document.getElementById('statsInput')
+        const targetCode = code || input.value.trim()
+        const statsBox = document.getElementById('statsBox')
+
+        statsBox.classList.remove('visible')
+        showError('statsError', '')
+
+        if (!targetCode) {
+            showError('statsError', 'введи код ссылки')
+            return
+        }
+
+        try {
+            const res = await fetch(`${API}/stats/${targetCode}`)
+            if (!res.ok) throw new Error(await res.text())
+
+            const d = await res.json()
+            currentCode = d.Code
+
+            document.getElementById('statUrl').textContent = d.OriginalURL
+            document.getElementById('statCode').textContent = d.Code
+            document.getElementById('statClicks').textContent = d.Clicks
+            document.getElementById('statCreated').textContent = new Date(d.CreatedAt).toLocaleString('ru')
+            document.getElementById('statExpires').textContent = d.ExpiresAt
+                ? new Date(d.ExpiresAt).toLocaleString('ru')
+                : 'не задан'
+
+            input.value = targetCode
+            statsBox.classList.add('visible')
+        } catch (e) {
+            showError('statsError', e.message)
+        }
+    }
+
+    async function deleteLink() {
+        if (!currentCode) return
+        if (!confirm(`Удалить ссылку ${currentCode}?`)) return
+
+        try {
+            const res = await fetch(`${API}/${currentCode}`, { method: 'DELETE' })
+            if (!res.ok) throw new Error(await res.text())
+
+            document.getElementById('statsBox').classList.remove('visible')
+            document.getElementById('statsInput').value = ''
+            currentCode = null
+            alert('Ссылка удалена')
+        } catch (e) {
+            showError('statsError', e.message)
+        }
+    }
+
+    function copyLink() {
+        const text = document.getElementById('shortUrl').textContent
+        navigator.clipboard.writeText(text)
+    }
+
+    function openStats() {
+        if (currentCode) {
+            document.getElementById('statsInput').value = currentCode
+            getStats(currentCode)
+            document.querySelector('.card:last-child').scrollIntoView({ behavior: 'smooth' })
+        }
+    }
+
+    function showError(id, msg) {
+        const el = document.getElementById(id)
+        el.textContent = msg
+        if (msg) el.classList.add('visible')
+        else el.classList.remove('visible')
+    }
+</script>
+</body>
+</html>
