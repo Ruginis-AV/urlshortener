@@ -29,17 +29,6 @@ func main() {
 	url := os.Getenv("DB_URL")
 	port := os.Getenv("PORT")
 
-	// _, filename, _, _ := runtime.Caller(0)
-	// root := filepath.Join(filepath.Dir(filename), "..")
-	// migPath := "file:///" + filepath.ToSlash(filepath.Join(root, "migrations"))
-
-	// log.Println(migPath)
-
-	// m, err := migrate.New(migPath, url)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
 	d, err := iofs.New(migrations, "migrations")
 	if err != nil {
 		log.Fatal(err)
